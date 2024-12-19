@@ -3,6 +3,8 @@ const Character = preload("res://scenes/clock-combat/character.gd")
 const Action = preload("res://scenes/clock-combat/action.gd")
 const Clock = preload("res://scenes/clock-combat/clock.gd")
 const Planner = preload("res://scenes/clock-combat/planner.gd")
+const Party = preload("res://shared/party.gd")
+const C = preload("res://shared/const.gd")
 # TODO: Why is this different? Should it be?
 var CombatLog = preload("res://scenes/clock-combat/combat_log.gd").new()
 
@@ -11,6 +13,8 @@ var enemies = []
 
 # See clock.gd
 var clock: Clock
+
+var party: Party
 
 signal scene_change # Define the signal
 
@@ -42,21 +46,23 @@ func _ready() -> void:
     clock.clock_event.connect(Callable(self, "_on_clock_ticked"))
     
     # Load the characters
-    # TODO: Load from a source. How does godot want to create a scene?
-    #       What kind of information can we pass from scene to scene?
-    #       Is there a global kind of functionality we should use for 
-    #       PCs, or is it built from something stored elsewhere?
     CombatLog.add_log_entry("Loading characters from character sheet...", Color.WHITE);
-    var warrior = Character.new("Warrior", Color.RED, true)
-    warrior.add_action(Action.new("Grapple", 0, "Prevent enemy movement this turn"))
-    warrior.add_action(Action.new("Cleave", 3, "Attack all enemies in your zone"))
-    var mage = Character.new("Mage", Color.CYAN, true)
-    mage.add_action(Action.new("Fireball", 5, "Deal all the damage to any zone"))
-    mage.add_action(Action.new("Magic Missile", 1, "Deal 3 damage to any targets"))
-    var rogue = Character.new("Rogue", Color.GREEN, true)
-    rogue.add_action(Action.new("Hide", 1, "Move into stealth"))
-    rogue.add_action(Action.new("Stab", 1, "Move from stealth to any zone. Attack"))
-    var pcs = [warrior, mage, rogue]
+    var pcs = []
+    for pc in party.pcs:
+        var ch = Character.new(pc.name, pc.color, true)
+
+        # TODO: This should be a little bit more smart/based on the character sheet more
+        if pc.pc_class == C.CLASSES.WARRIOR:
+            ch.add_action(Action.new("Grapple", 0, "Prevent enemy movement this turn"))
+            ch.add_action(Action.new("Cleave", 3, "Attack all enemies in your zone"))
+        elif pc.pc_class == C.CLASSES.WIZARD:
+            ch.add_action(Action.new("Fireball", 5, "Deal all the damage to any zone"))
+            ch.add_action(Action.new("Magic Missile", 1, "Deal 3 damage to any targets"))
+        elif pc.pc_class == C.CLASSES.ROGUE:
+            ch.add_action(Action.new("Hide", 1, "Move into stealth"))
+            ch.add_action(Action.new("Stab", 1, "Move from stealth to any zone. Attack"))
+
+        pcs.append(ch)
 
     # Same as above, but this would be created more in real time as we
     # create the combat, and/or loaded from a predefined list of baddies
@@ -126,3 +132,6 @@ func plan_enemies():
     CombatLog.add_log_entry("Enemies planning")
     for ch in enemies:
         plan_action(ch, "__random__")
+
+func set_party(party: Party):
+    self.party = party
